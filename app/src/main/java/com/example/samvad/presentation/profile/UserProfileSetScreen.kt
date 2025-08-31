@@ -38,6 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -47,12 +48,14 @@ import com.example.samvad.presentation.navigation.Routes
 import com.example.samvad.presentation.viewmodel.PhoneAuthViewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import hilt_aggregated_deps._com_example_samvad_presentation_viewmodel_PhoneAuthViewModel_HiltModules_KeyModule
 
 @RequiresApi(Build.VERSION_CODES.P)
 @Composable
+
 fun UserProfileSetScreen(
-    phoneAuthViewModel: PhoneAuthViewModel = hiltViewModel(),
-    navHostController: NavHostController
+        phoneAuthViewModel : PhoneAuthViewModel = hiltViewModel(),
+        navHostController: NavHostController ,
 ) {
 
     var name by remember { mutableStateOf("") }
@@ -109,7 +112,8 @@ fun UserProfileSetScreen(
                 .size(128.dp)
                 .clip(shape = CircleShape)
                 .border(2.dp, color = Color.Gray, shape = CircleShape)
-                .clickable { imagePickerLauncher.launch("image/*") }) {
+                .clickable { imagePickerLauncher.launch("image/*") }
+        ) {
             if (bitmapImage != null) {
                 Image(
                     bitmap = bitmapImage!!.asImageBitmap(),
@@ -168,7 +172,7 @@ fun UserProfileSetScreen(
         TextField(
             value = status ,
             onValueChange = {status  = it} ,
-            label = {Text("Name")} ,
+            label = {Text("Status")} ,
 
             modifier = Modifier.fillMaxWidth(),
             colors = TextFieldDefaults.colors(
@@ -181,9 +185,9 @@ fun UserProfileSetScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(onClick  = {
-            phoneAuthViewModel.saveUserProfile(userId, name,status , bitmapImage)
-            navHostController.navigate(Routes.HomeScreen)
 
+                    phoneAuthViewModel.saveUserProfile(userId , name , status , bitmapImage)
+                    navHostController.navigate(Routes.HomeScreen)
         } , colors = ButtonDefaults.buttonColors(colorResource(R.color.light_green))){
                 Text("Save")
         }

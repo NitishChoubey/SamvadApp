@@ -1,6 +1,9 @@
 package com.example.samvad.presentation.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,8 +15,10 @@ import com.example.samvad.presentation.profile.UserProfileSetScreen
 import com.example.samvad.presentation.splashscreen.SplashScreen
 import com.example.samvad.presentation.updatescreen.UpdateScreen
 import com.example.samvad.presentation.userregistrationscreen.UserRegistrationScreen
+import com.example.samvad.presentation.viewmodel.BaseViewModel
 import com.example.samvad.presentation.welcomescreen.WelcomeScreen
 
+@RequiresApi(Build.VERSION_CODES.P)
 @Composable
 fun WhatsAppNavigationSystem() {
     //NavHostController is a subclass of NavController
@@ -39,22 +44,25 @@ fun WhatsAppNavigationSystem() {
             UserRegistrationScreen(navController)
         }
 
+
         composable<Routes.HomeScreen> {
-            HomeScreen()
+            val baseViewModel: BaseViewModel = hiltViewModel()
+            HomeScreen(navController , baseViewModel)
         }
 
         composable<Routes.UpdateScreen> {
-            UpdateScreen()
+            UpdateScreen(navController)
         }
         composable<Routes.CommunitiesScreen> {
-            CommunitiesScreen()
+            CommunitiesScreen(navController)
         }
 
         composable<Routes.CallScreen>{
-            CallScreen()
+            CallScreen(navController)
         }
 
         composable<Routes.UserProfileSetScreen>{
+
             UserProfileSetScreen(navHostController = navController)
         }
 

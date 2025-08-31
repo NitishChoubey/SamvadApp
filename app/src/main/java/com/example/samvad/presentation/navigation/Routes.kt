@@ -1,5 +1,6 @@
 package com.example.samvad.presentation.navigation
 
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.serialization.Serializable
 
 sealed class Routes {
@@ -14,6 +15,7 @@ sealed class Routes {
     data object UserRegistrationScreen : Routes()
 
     @Serializable
+
     data object HomeScreen : Routes()
 
     @Serializable
@@ -27,4 +29,14 @@ sealed class Routes {
 
     @Serializable
     data object UserProfileSetScreen
+
+    @Serializable
+    data object SettingsScreen : Routes()
+
+    @Serializable
+    data object ChatScreen : Routes(){
+
+        const val route = "chat_screen/{phoneNumber}"
+        fun createRoute(phoneNumber: String) = "chat_screen/$phoneNumber"
+    }
 }
