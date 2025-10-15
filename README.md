@@ -4,6 +4,19 @@ A modern Android application project built with Kotlin and Gradle Kotlin DSL.
 
 “Samvad” means “conversation/dialogue.” This repository provides a clean, ready-to-run Android app scaffold you can open in Android Studio or build entirely from the command line using the Gradle Wrapper.
 
+## Tech stack
+<p>
+  <a href="https://kotlinlang.org/" target="_blank">
+    <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" />
+  </a>
+  <a href="https://developer.android.com/jetpack/compose" target="_blank">
+    <img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-3DDC84?style=for-the-badge&logo=android&logoColor=white" />
+  </a>
+  <a href="https://firebase.google.com/" target="_blank">
+    <img alt="Firebase" src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=000000" />
+  </a>
+</p>
+
 ---
 
 ## Table of contents
@@ -22,6 +35,8 @@ A modern Android application project built with Kotlin and Gradle Kotlin DSL.
 
 ## Features
 - Kotlin-first Android app module
+- Jetpack Compose UI toolkit
+- Firebase-ready integration (e.g., Auth/Firestore/Storage as needed)
 - Gradle Kotlin DSL configuration (`build.gradle.kts`, `settings.gradle.kts`)
 - Gradle Wrapper included for reproducible builds (no global Gradle required)
 - Android Studio ready (project files included)
