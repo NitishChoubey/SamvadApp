@@ -49,3 +49,87 @@ gradle.properties
 .idea/copilot.data.migration.edit.xml
 .idea/.name
 
+# All documentation markdown files except README.md
+BACKEND_STARTUP_FIXED.md
+CHAT_FIX_SUMMARY.md
+CHAT_NOT_OPENING_FIX.md
+FINAL_INSTALLATION_GUIDE.md
+HOW_TO_START_CHATTING.md
+KSP_ERROR_FIX.md
+KSP_ERROR_FIX_SUMMARY.md
+MIGRATION_GUIDE.md
+MIGRATION_SUMMARY.md
+NETWORK_SECURITY_FIX.md
+POSTGRESQL_QUICK_GUIDE.md
+POSTGRESQL_SETUP.md
+QUICK_SETUP.md
+README_MIGRATION.md
+SEARCH_FIX_SUMMARY.md
+SEARCH_USER_GUIDE.md
+START_HERE.md
+START_TESTING_NOW.md
+TESTING_GUIDE.md
+
+# Batch and shell scripts (local automation)
+start-backend.bat
+start-backend.sh
+install-app.bat
+
+# Backend specific ignores
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+backend/HELP.md
+backend/README.md
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# OS specific files
+Thumbs.db
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# IDE settings that contain sensitive info
+.vscode/
+.idea/sonarlint/
+.idea/dataSources.xml
+.idea/dataSources/
+.idea/httpRequests/
+.idea/shelf/
+
+# Build outputs that shouldn't be committed
+*.apk
+*.ap_
+*.aab
+output.json
+*.dex
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Sensitive configuration templates (keep only .template versions)
+application-local.properties
+application-dev.properties
+application-prod.properties
+
