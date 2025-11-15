@@ -1,5 +1,6 @@
 package com.example.samvad.presentation.profile
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
@@ -38,7 +39,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -46,9 +46,6 @@ import coil.compose.rememberImagePainter
 import com.example.samvad.R
 import com.example.samvad.presentation.navigation.Routes
 import com.example.samvad.presentation.viewmodel.PhoneAuthViewModel
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
-import hilt_aggregated_deps._com_example_samvad_presentation_viewmodel_PhoneAuthViewModel_HiltModules_KeyModule
 
 @RequiresApi(Build.VERSION_CODES.P)
 @Composable
@@ -60,21 +57,15 @@ fun UserProfileSetScreen(
 
     var name by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
-    var profileImageUri by remember { mutableStateOf<Uri?>(null) }  //It will store the Uri of Image
-//    //URI --> URI ka full form hota hai Uniform Resource Identifier. Yeh ek string hoti hai jo internet ya network par kisi resource (jaise webpage, file, ya service) ko uniquely identify karti hai. URI ka use mainly resources ko locate ya access karne ke liye hota hai.
-//    //Agar aap Android development ki baat kar rahe hain (jaise aapke previous questions se lagta hai), toh Uri ek class hoti hai (android.net.Uri) jo content providers se data access karne ke liye use hoti hai.
-//    //Yeh Uri content provider se data fetch karne ke liye use hota hai, jaise contacts, images, ya files.
-//
-//
+    var profileImageUri by remember { mutableStateOf<Uri?>(null) }
     var bitmapImage by remember { mutableStateOf<Bitmap?>(null) }
-//
-//    //Instance of firebaseauth
-    val firebaseAuth = Firebase.auth
-    val phoneNumber = firebaseAuth.currentUser?.phoneNumber
-        ?: ""  //currentuser le rhe hai ...agrr current user hai toh phone number add kr rhe hai aur agr nhi hai toh empty string lenge
-    val userId = firebaseAuth.currentUser?.uid ?: ""
 
     val context = LocalContext.current
+
+    // Get user info from SharedPreferences
+    val prefs = context.getSharedPreferences("samvad_prefs", Context.MODE_PRIVATE)
+    val phoneNumber = prefs.getString("phone_number", "") ?: ""
+    val userId = prefs.getString("user_id", "") ?: ""
 
     //What we are doing --> hmlog image le rhe hai aur uss image ko string me convert krke firebase ke database me save kr rhe hai aur phir jb uss
     // image ko show krna hai app me toh uss string form me stored image ko access krke usko string se image form me convert kr denge

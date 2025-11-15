@@ -3,181 +3,175 @@ package com.example.samvad.presentation.viewmodel
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
-import androidx.compose.runtime.snapshots.Snapshot
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.samvad.BuildConfig
+import com.example.samvad.data.local.TokenManager
+import com.example.samvad.data.remote.api.MessageApi
+import com.example.samvad.data.remote.api.UserApi
+import com.example.samvad.data.remote.dto.MessageDto
+import com.example.samvad.data.remote.websocket.WebSocketManager
 import com.example.samvad.models.Message
 import com.example.samvad.presentation.homescreen.ChatDesignModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthSettings
-import com.google.firebase.database.ChildEventListener
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
+import javax.inject.Inject
 
+@HiltViewModel
+class BaseViewModel @Inject constructor(
+    private val tokenManager: TokenManager,
+    private val userApi: UserApi,
+    private val messageApi: MessageApi
+) : ViewModel() {
 
-
-
-class BaseViewModel : ViewModel() {
-
-    fun searchUserByPhoneNumber(phoneNumber: String, callback: (ChatDesignModel?) -> Unit) {
-
-        val currentUser = FirebaseAuth.getInstance()
-
-        if (currentUser == null) {
-            android.util.Log.e("BaseViewModel", "User is not authenticated")
-            callback(null)
-            return
-        }
-
-        val databaseReference = FirebaseDatabase.getInstance().getReference("users")
-        databaseReference.orderByChild("phoneNumber").equalTo(phoneNumber)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.exists()) {
-
-                        val user = snapshot.children.first().getValue(ChatDesignModel::class.java)
-                        callback(user)
-                    } else {
-                        callback(null)
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    android.util.Log.e(
-                        "BaseViewModel",
-                        "Error fetching User: ${error.message}, Details: ${error.details}"
-                    )
-                    callback(null)
-                }
-
-            })
-    }
-
-    fun getChatForUser(userId: String, callback: (List<ChatDesignModel>) -> Unit) {
-
-        val chatRef = FirebaseDatabase.getInstance().getReference("users/$userId/chats")
-        chatRef.orderByChild("userId").equalTo(userId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-
-                override fun onDataChange(snapshot: DataSnapshot) {
-
-                    val chatList = mutableListOf<ChatDesignModel>()
-
-                    for (childSnapshot in snapshot.children) {
-
-                        val chat = childSnapshot.getValue(ChatDesignModel::class.java)
-
-                        if (chat != null) {
-                            chatList.add(chat)
-                        }
-                    }
-                    callback(chatList)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    android.util.Log.e(
-                        "BaseViewModel",
-                        "Error fetching user chats : ${error.message}"
-                    )
-                    callback(emptyList())
-                }
-            })
-    }
+    private var webSocketManager: WebSocketManager? = null
+    private val messageCallbacks = mutableMapOf<String, (Message) -> Unit>()
 
     private val _chatList = MutableStateFlow<List<ChatDesignModel>>(emptyList())
     val chatList = _chatList.asStateFlow()
 
     init {
+        initializeWebSocket()
         loadChatData()
     }
 
+    private fun initializeWebSocket() {
+        val token = tokenManager.getToken()
+        if (token != null) {
+            webSocketManager = WebSocketManager(
+                serverUrl = BuildConfig.BASE_URL,
+                token = token,
+                onMessageReceived = { message ->
+                    handleIncomingMessage(message)
+                }
+            )
+            webSocketManager?.connect()
+        }
+    }
+
+    private fun handleIncomingMessage(messageDto: MessageDto) {
+        val message = Message(
+            senderPhoneNumber = messageDto.senderId,
+            message = messageDto.messageContent,
+            timeStamp = messageDto.timestamp
+        )
+
+        // Notify callbacks
+        val conversationKey = "${messageDto.senderId}-${messageDto.receiverId}"
+        messageCallbacks[conversationKey]?.invoke(message)
+
+        Log.d("BaseViewModel", "Received message: ${message.message}")
+    }
+
+    fun getUserId(): String? = tokenManager.getUserId()
+
+    fun getPhoneNumber(): String? = tokenManager.getPhoneNumber()
+
+    fun searchUserByPhoneNumber(phoneNumber: String, callback: (ChatDesignModel?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                Log.d("BaseViewModel", "Searching for user with phone: $phoneNumber")
+
+                val response = userApi.searchByPhoneNumber(phoneNumber)
+                if (response.isSuccessful && response.body() != null) {
+                    val userDto = response.body()!!
+                    Log.d("BaseViewModel", "User found: ${userDto.userId}, ${userDto.name}")
+
+                    val chatModel = ChatDesignModel(
+                        userId = userDto.userId,
+                        phoneNumber = userDto.phoneNumber,
+                        name = userDto.name.ifEmpty { userDto.phoneNumber },
+                        message = "",
+                        time = "",
+                        image = null
+                    )
+                    callback(chatModel)
+                } else {
+                    Log.e("BaseViewModel", "User not found: ${response.code()}")
+                    callback(null)
+                }
+            } catch (e: Exception) {
+                Log.e("BaseViewModel", "Error searching user: ${e.message}", e)
+                callback(null)
+            }
+        }
+    }
+
+    fun getChatForUser(userId: String, callback: (List<ChatDesignModel>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                Log.d("BaseViewModel", "Getting chats for user: $userId")
+                // TODO: Implement get chats API endpoint in backend
+                callback(emptyList())
+            } catch (e: Exception) {
+                Log.e("BaseViewModel", "Error fetching user chats: ${e.message}")
+                callback(emptyList())
+            }
+        }
+    }
+
     private fun loadChatData() {
-
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-
-        if (currentUserId != null) {
-
-            val chatRef = FirebaseDatabase.getInstance().getReference("chats")
-
-            chatRef.orderByChild("userId").equalTo(currentUserId)
-                .addValueEventListener(object : ValueEventListener {
-
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        val chatList = mutableListOf<ChatDesignModel>()
-                        for (childSnapshot in snapshot.children) {
-
-                            val chat = childSnapshot.getValue(ChatDesignModel::class.java)
-
-                            if (chat != null) {
-
-                                chatList.add(chat)
-                            }
-                        }
-                        _chatList.value = chatList
-                    }
-
-                    override fun onCancelled(error: DatabaseError) {
-                        android.util.Log.e(
-                            "BaseViewModel",
-                            "Error fetching user chats : ${error.message}"
-                        )
-                    }
-
-                })
+        viewModelScope.launch {
+            try {
+                val currentUserId = tokenManager.getUserId()
+                if (currentUserId != null) {
+                    Log.d("BaseViewModel", "Loading chat data for user: $currentUserId")
+                    // TODO: Implement get chats list API endpoint in backend
+                    _chatList.value = emptyList()
+                }
+            } catch (e: Exception) {
+                Log.e("BaseViewModel", "Error loading chat data: ${e.message}")
+            }
         }
     }
 
     fun addChat(newChat: ChatDesignModel) {
+        viewModelScope.launch {
+            try {
+                val currentUserId = tokenManager.getUserId()
+                if (currentUserId != null) {
+                    Log.d("BaseViewModel", "Chat added successfully")
 
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-        if (currentUserId != null) {
+                    // TODO: Implement add chat API endpoint in backend
 
-            val newChatRef = FirebaseDatabase.getInstance().getReference("chats").push()
-            val chatWithUser = newChat.copy(currentUserId)
-            newChatRef.setValue(chatWithUser).addOnSuccessListener {
-
-                android.util.Log.d("BaseViewModel", "chat added successfully to firebase")
-            }.addOnFailureListener { exception ->
-                android.util.Log.e("BaseViewModel", "Failed to add chat: ${exception.message}")
+                    // Update local list
+                    _chatList.value = _chatList.value + newChat
+                } else {
+                    Log.e("BaseViewModel", "No user is authenticated")
+                }
+            } catch (e: Exception) {
+                Log.e("BaseViewModel", "Failed to add chat: ${e.message}")
             }
-
-        } else {
-            android.util.Log.e("BaseViewModel", "No user is authenticated")
         }
     }
 
-    private val dataBaseReference = FirebaseDatabase.getInstance().reference
-
     fun sendMessage(senderPhoneNumber: String, receiverPhoneNumber: String, messageText: String) {
+        viewModelScope.launch {
+            try {
+                val senderId = tokenManager.getUserId() ?: return@launch
 
-        val messageId = dataBaseReference.push().key ?: return
+                val messageDto = MessageDto(
+                    senderId = senderId,
+                    receiverId = receiverPhoneNumber, // TODO: Convert phone to userId
+                    messageContent = messageText,
+                    timestamp = System.currentTimeMillis(),
+                    messageType = "TEXT"
+                )
 
-        val message = Message(
-            senderPhoneNumber = senderPhoneNumber,
-            message = messageText,
-            timeStamp = System.currentTimeMillis()
-        )
+                // Send via WebSocket
+                webSocketManager?.sendMessage(messageDto)
 
-        dataBaseReference.child("messages")
-            .child(senderPhoneNumber)
-            .child(receiverPhoneNumber)
-            .child(messageId)
-            .setValue(message)
-
-        dataBaseReference.child("messages")
-            .child(receiverPhoneNumber)
-            .child(senderPhoneNumber)
-            .child(messageId)
-            .setValue(message)
-
-
+                Log.d("BaseViewModel", "Message sent successfully")
+            } catch (e: Exception) {
+                Log.e("BaseViewModel", "Failed to send message: ${e.message}")
+            }
+        }
     }
 
     fun getMessage(
@@ -185,45 +179,31 @@ class BaseViewModel : ViewModel() {
         receiverPhoneNumber: String,
         onNewMessage: (Message) -> Unit
     ) {
-        val messageRef =
-            dataBaseReference.child("messages").child(senderPhoneNumber).child(receiverPhoneNumber)
+        // Store callback for this conversation
+        val conversationKey = "$senderPhoneNumber-$receiverPhoneNumber"
+        messageCallbacks[conversationKey] = onNewMessage
 
-        messageRef.addChildEventListener(object : ChildEventListener {
-            override fun onChildAdded(snapshot: DataSnapshot, presentChildName: String?) {
+        // Load message history from API
+        viewModelScope.launch {
+            try {
+                // TODO: Implement get conversation API call
+                // val response = messageApi.getConversation(receiverId)
+                // if (response.isSuccessful && response.body() != null) {
+                //     response.body()!!.forEach { messageDto ->
+                //         val message = Message(
+                //             senderPhoneNumber = messageDto.senderId,
+                //             message = messageDto.messageContent,
+                //             timeStamp = messageDto.timestamp
+                //         )
+                //         onNewMessage(message)
+                //     }
+                // }
 
-                val message = snapshot.getValue(Message::class.java)
-
-                if (message != null) {
-                    onNewMessage(message)
-
-
-                }
+                Log.d("BaseViewModel", "Getting messages for conversation: $conversationKey")
+            } catch (e: Exception) {
+                Log.e("BaseViewModel", "Error getting messages: ${e.message}")
             }
-
-            override fun onChildChanged(
-                snapshot: DataSnapshot,
-                previousChildName: String?
-            ) {
-
-            }
-
-            override fun onChildRemoved(snapshot: DataSnapshot) {
-
-            }
-
-            override fun onChildMoved(
-                snapshot: DataSnapshot,
-                previousChildName: String?
-            ) {
-
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-
-            }
-        })
-
-
+        }
     }
 
     fun fetchLastMessageForChat(
@@ -231,104 +211,67 @@ class BaseViewModel : ViewModel() {
         receiversPhoneNumber: String,
         onLastMessageFetched: (String, String) -> Unit
     ) {
-        val chatRef =
-            FirebaseDatabase.getInstance().reference.child("messages").child(sendersPhoneNumber)
-                .child(receiversPhoneNumber)
-
-        chatRef.orderByChild("timestamp").limitToLast(1)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.exists()) {
-                        val lastMessage =
-                            snapshot.children.firstOrNull()?.child("message")?.value as? String
-                        val timestamp =
-                            snapshot.children.firstOrNull()?.child("message")?.value as? String
-                        onLastMessageFetched(lastMessage ?: "No message", timestamp ?: "--:--")
-                    } else {
-
-                        onLastMessageFetched("No message", "--:--")
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    onLastMessageFetched("No message", "--:--")
-                }
-            })
+        viewModelScope.launch {
+            try {
+                Log.d("BaseViewModel", "Fetching last message for chat")
+                // TODO: Implement get last message API endpoint
+                onLastMessageFetched("No message", "--:--")
+            } catch (e: Exception) {
+                Log.e("BaseViewModel", "Error fetching last message: ${e.message}")
+                onLastMessageFetched("No message", "--:--")
+            }
+        }
     }
 
     fun loadChatList(
         currentUserPhoneNumber: String,
         onChatListLoaded: (List<ChatDesignModel>) -> Unit
-
     ) {
-
-        val chatList = mutableListOf<ChatDesignModel>()
-        val chatRef =
-            FirebaseDatabase.getInstance().reference.child("chats").child(currentUserPhoneNumber)
-
-
-        chatRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists()) {
-                    snapshot.children.forEach { child ->
-                        val phoneNumber = child.key ?: return@forEach
-                        val name = child.child("name").value as? String ?: "Unknown"
-                        val image = child.child("image").value as? String
-
-                        val profileImageBitmap = image?.let { decodeBase64ToBitmap(it) }
-
-                        fetchLastMessageForChat(currentUserPhoneNumber, phoneNumber) { lastMessage, time ->
-                            chatList.add(
-                                ChatDesignModel(
-                                    name = name,
-                                    image = profileImageBitmap as Int?,
-                                    message = lastMessage,
-                                    time = time
-
-                                )
-                            )
-
-                            if(chatList.size == snapshot.childrenCount.toInt()){
-                                onChatListLoaded(chatList)
-                            }
-
-
-                        }
-
-                    }
-                }else{
-                    onChatListLoaded(emptyList())
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
+        viewModelScope.launch {
+            try {
+                Log.d("BaseViewModel", "Loading chat list for: $currentUserPhoneNumber")
+                // TODO: Implement get chat list API endpoint
+                onChatListLoaded(emptyList())
+            } catch (e: Exception) {
+                Log.e("BaseViewModel", "Error loading chat list: ${e.message}")
                 onChatListLoaded(emptyList())
             }
-            })
-
         }
+    }
 
-
-    private fun decodeBase64ToBitmap(base64Image: String): Bitmap?{
-
-        return try{
-            val decodedByte = Base64.decode(base64Image , Base64.DEFAULT)
-            BitmapFactory.decodeByteArray(decodedByte , 0 , decodedByte.size)
-        }catch(e : IOException){
+    private fun decodeBase64ToBitmap(base64Image: String): Bitmap? {
+        return try {
+            val decodedByte = Base64.decode(base64Image, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.size)
+        } catch (e: IOException) {
             null
         }
-
     }
 
     fun base64ToBitmap(base64String: String): Bitmap? {
-        return try{
-            val decodedByte = Base64.decode(base64String , Base64.DEFAULT)
-            val inputStream : InputStream = ByteArrayInputStream(decodedByte)
+        return try {
+            val decodedByte = Base64.decode(base64String, Base64.DEFAULT)
+            val inputStream: InputStream = ByteArrayInputStream(decodedByte)
             BitmapFactory.decodeStream(inputStream)
-        }catch (e : IOException){
+        } catch (e: IOException) {
             null
         }
     }
 
+    fun convertBase64ToBitmap(base64String: String): Bitmap? {
+        return try {
+            val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
+            val inputStream: InputStream = ByteArrayInputStream(decodedBytes)
+            BitmapFactory.decodeStream(inputStream)
+        } catch (e: IOException) {
+            null
+        }
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        webSocketManager?.disconnect()
+        messageCallbacks.clear()
+    }
+}
 

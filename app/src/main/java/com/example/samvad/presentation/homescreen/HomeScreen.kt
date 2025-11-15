@@ -46,13 +46,10 @@ import com.example.samvad.R
 import com.example.samvad.presentation.bottomnavigation.BottomNavigation
 import com.example.samvad.presentation.navigation.Routes
 import com.example.samvad.presentation.viewmodel.BaseViewModel
-import com.google.firebase.auth.FirebaseAuth
 
 
 @Composable
-
 fun HomeScreen(navHostController: NavHostController, homeBaseViewModel: BaseViewModel) {
-
 
     //variable for controlling popUp
     var showPopup by remember {
@@ -61,8 +58,8 @@ fun HomeScreen(navHostController: NavHostController, homeBaseViewModel: BaseView
 
     val chatData by homeBaseViewModel.chatList.collectAsState()
 
-    //for fetching userId
-    val userId = FirebaseAuth.getInstance().currentUser?.uid
+    //for fetching userId - now coming from BaseViewModel
+    val userId = homeBaseViewModel.getUserId()
 
     if (userId != null) {
 
@@ -266,11 +263,15 @@ fun HomeScreen(navHostController: NavHostController, homeBaseViewModel: BaseView
             LazyColumn {
                 items(chatData) { chat ->
                     ChatDesign(chatDesignModel = chat, onClick = {
-                        navHostController.navigate(
-                            Routes.ChatScreen.createRoute(
-                                phoneNumber = chat.phoneNumber ?: "ok"
-                            )
-                        )
+                        val phoneNumber = chat.phoneNumber ?: "unknown"
+                        val route = Routes.ChatScreen.createRoute(phoneNumber)
+                        android.util.Log.d("HomeScreen", "Navigating to chat with phone: $phoneNumber, route: $route")
+                        try {
+                            navHostController.navigate(route)
+                            android.util.Log.d("HomeScreen", "Navigation successful")
+                        } catch (e: Exception) {
+                            android.util.Log.e("HomeScreen", "Navigation failed: ${e.message}", e)
+                        }
                     }, baseViewModel = homeBaseViewModel)
                 }
 

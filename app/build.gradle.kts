@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
-    alias(libs.plugins.google.gms.google.services)
+    // Removed Firebase Google Services plugin
 }
 
 android {
@@ -23,6 +23,9 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Backend API URL - change this to your server URL
+        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
     }
 
     buildTypes {
@@ -43,6 +46,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -67,11 +71,15 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material3:material3-android:1.3.2")
-    implementation(libs.firebase.database)
-    implementation(libs.firebase.auth.ktx)
-    implementation(libs.firebase.crashlytics.buildtools)
+
+    // Removed Firebase dependencies
+    // implementation(libs.firebase.database)
+    // implementation(libs.firebase.auth.ktx)
+    // implementation(libs.firebase.crashlytics.buildtools)
+
     implementation(libs.foundation.android)
     implementation(libs.navigation.runtime.android)
+    implementation(libs.navigation.runtime.ktx)
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
@@ -93,6 +101,18 @@ dependencies {
 
     //coil dependency
     implementation(libs.coil.compose)
+
+    // Retrofit for REST API
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // WebSocket for real-time messaging
+    implementation("org.java-websocket:Java-WebSocket:1.5.4")
+
+    // Gson for JSON parsing
+    implementation("com.google.code.gson:gson:2.10.1")
 
     //Dependency Injection ka matlab hai:
     //"Ek object ko uski required cheezein (dependencies) manually create karne ki jagah automatically provide kar dena."

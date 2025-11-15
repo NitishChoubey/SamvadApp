@@ -5,13 +5,17 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.samvad.presentation.callscreen.CallScreen
+import com.example.samvad.presentation.chatscreen.ChatScreen
 import com.example.samvad.presentation.communitiesscreen.CommunitiesScreen
 import com.example.samvad.presentation.homescreen.HomeScreen
 import com.example.samvad.presentation.profile.UserProfileSetScreen
+import com.example.samvad.presentation.settingsscreen.SettingsScreen
 import com.example.samvad.presentation.splashscreen.SplashScreen
 import com.example.samvad.presentation.updatescreen.UpdateScreen
 import com.example.samvad.presentation.userregistrationscreen.UserRegistrationScreen
@@ -64,6 +68,27 @@ fun WhatsAppNavigationSystem() {
         composable<Routes.UserProfileSetScreen>{
 
             UserProfileSetScreen(navHostController = navController)
+        }
+
+        composable<Routes.SettingsScreen> {
+            SettingsScreen(navController)
+        }
+
+        composable(
+            route = Routes.ChatScreen.route,
+            arguments = listOf(
+                navArgument("phoneNumber") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val phoneNumber = backStackEntry.arguments?.getString("phoneNumber") ?: ""
+            val baseViewModel: BaseViewModel = hiltViewModel()
+            ChatScreen(
+                navHostController = navController,
+                phoneNumber = phoneNumber,
+                baseViewModel = baseViewModel
+            )
         }
 
     }
