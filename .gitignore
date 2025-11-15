@@ -13,3 +13,39 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Exclude all .md files except README.md
+*.md
+!README.md
+
+# Secret and sensitive files
+google-services.json
+application.properties
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+*.env
+.env
+.env.local
+.env.production
+secrets.properties
+keystore.properties
+
+# API keys and credentials
+**/api-keys.properties
+**/credentials.json
+**/secrets.json
+
+# Local configuration
+local.properties
+gradle.properties
+
+# IDE specific copilot files
+.idea/copilot.data.migration.agent.xml
+.idea/copilot.data.migration.ask.xml
+.idea/copilot.data.migration.ask2agent.xml
+.idea/copilot.data.migration.edit.xml
+.idea/.name
+
