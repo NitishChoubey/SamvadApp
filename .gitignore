@@ -47,6 +47,7 @@ gradle.properties
 .idea/copilot.data.migration.ask.xml
 .idea/copilot.data.migration.ask2agent.xml
 .idea/copilot.data.migration.edit.xml
+.idea/copilotDiffState.xml
 .idea/.name
 
 # All documentation markdown files except README.md
